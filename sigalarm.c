@@ -13,8 +13,22 @@ void ding(int sig)
 
 int main(int argc, char * argv[])
 {
+    char* endptr; // strtol() returns endptr '\0' when successful
+    int time = 0;
+    // ensure user inputs argument
+    if(argc != 2){
+        printf("Error: Please provide a command line argument\n");
+        exit(EXIT_FAILURE);
+    }
+    else{
+        // ensure user inputted an int argument
+        time = strtol(argv[1], &endptr, 10);
+        if(*endptr != '\0'){
+            fprintf(stderr, "Invalid argument supplied `%s is not an integer\n", argv[1]);
+            exit(EXIT_FAILURE);
+        }
+    }
     pid_t pid;
-    int time = atoi(argv[1]);
 
     pid = fork();
     switch(pid) 
@@ -26,9 +40,12 @@ int main(int argc, char * argv[])
     //child
         sleep(time);
         printf("Waiting acknowledge from %d\n", pid);
-        kill(getppid(), SIGALRM);
-        
-        
+        int nkill = kill(getppid(), SIGALRM);
+        if(nkill == -1){
+            printf("Error in killing child process\n");
+            exit(EXIT_FAILURE);
+        }
+        // binds the ding function to signal handler - ding()
         (void) signal(SIGALRM, ding);
         pause();
         if (alarm_fired){
@@ -48,7 +65,11 @@ int main(int argc, char * argv[])
         if (alarm_fired){
             printf("Received alarm signal from %d\n", pid);
             alarm_fired = 0;
-            kill(pid, SIGALRM);
+            int nkill = kill(pid, SIGALRM);
+            if(nkill == -1){
+                    printf("Error in killing parent process\n");
+                    exit(EXIT_FAILURE);
+            }
         }
         else 
         {
